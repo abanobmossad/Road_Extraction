@@ -232,3 +232,6 @@ print(str(datetime.now()) + ': writing validDataFile')
 writeDataFile(validInputImagesPath, validOutputImagesPath, validInputImagesFiles, validOutputImagesFiles,
               validDataFileName)
 print(str(datetime.now()) + ': validDataFile complete')
+
+
+#comment
