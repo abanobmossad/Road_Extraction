@@ -34,7 +34,8 @@ print("initializing model", t2 - t1)
 
 
 def extractFeatures():
-    features = np.zeros((((inputImageXSize - ((rectSize//2)*2)) * (inputImageYSize - ((rectSize//2)*2))), rectSize*rectSize*3), dtype=np.int)
+    features = np.zeros((((inputImageXSize - ((rectSize // 2) * 2)) * (inputImageYSize - ((rectSize // 2) * 2))),
+                         rectSize * rectSize * 3), dtype=np.int)
     rowIndex = 0
 
     for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
