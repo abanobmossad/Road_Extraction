@@ -2,6 +2,7 @@ import random
 from os import listdir
 from PIL import Image
 from datetime import datetime
+import time
 
 ''' 
     @:param
@@ -23,6 +24,8 @@ from datetime import datetime
     [6] contain all the feature with the right values used to train, test and predict 
     
 '''
+# time to check total time to process this images to CSV files
+startTotalTime = time.time()
 
 # Train path
 trainInputImagesPath = 'E:/mass_roads/Train/Train-input'
@@ -33,10 +36,9 @@ trainOutputImagesPath = 'E:/mass_roads/Train/Train-output'
 testInputImagesPath = 'E:/mass_roads/Test/Test-input'
 testOutputImagesPath = 'E:/mass_roads/Test/Test-output'
 
-
-#buildings path
+# buildings path
 targetBuildingsImagesPath = 'E:/mass_roads/buildings/buildings-target'
-testBuildingsImagesPath  = 'E:/mass_roads/buildings/buildings-test'
+testBuildingsImagesPath = 'E:/mass_roads/buildings/buildings-test'
 
 trainInputImagesFiles = listdir(trainInputImagesPath)
 trainOutputImagesFiles = listdir(trainOutputImagesPath)
@@ -44,7 +46,7 @@ trainOutputImagesFiles = listdir(trainOutputImagesPath)
 testInputImagesFiles = listdir(testInputImagesPath)
 testOutputImagesFiles = listdir(testOutputImagesPath)
 
-targetBuildingsImagesFiles =listdir(targetBuildingsImagesPath)
+targetBuildingsImagesFiles = listdir(targetBuildingsImagesPath)
 testBuildingsImagesFiles = listdir(testBuildingsImagesPath)
 # check if the folders are the same length
 
@@ -59,8 +61,6 @@ print(str(datetime.now()) + ': testOutputImagesFiles:', len(testOutputImagesFile
 if (len(testInputImagesFiles) != len(testOutputImagesFiles)):
     raise Exception('test input images and output images number mismatch')
 
-
-
 for i in range(len(trainInputImagesFiles)):
     inputImageFile = trainInputImagesFiles[i][:-5]
     outputImageFile = trainOutputImagesFiles[i][:-4]
@@ -72,8 +72,6 @@ for i in range(len(testInputImagesFiles)):
     outputImageFile = testOutputImagesFiles[i][:-4]
     if (inputImageFile != outputImageFile):
         raise Exception('test inputImageFile and outputImageFile mismatch at index', str(i))
-
-
 
 print(str(datetime.now()) + ': input and output files check success')
 
@@ -126,7 +124,8 @@ def writeDataFileOld(inputImagePath, outputImagePath, inputImageFiles, outputIma
                 dataFile.write(line)
 
 
-def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageFiles, outputImageFiles, buildingImageFiles,dataFileName):
+def writeDataFile(inputImagePath, outputImagePath, buildingImagePath, inputImageFiles, outputImageFiles,
+                  buildingImageFiles, dataFileName):
     dataFile = open(dataFileName, 'w')
     rectSize = 5
     linesCount = 0
@@ -134,7 +133,7 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
     linesLimitPerImage = (linesLimit / len(inputImageFiles)) + 1
 
     for i in range(len(inputImageFiles)):
-        print(str(datetime.now()) + ': prcessing image', i + 1,inputImageFiles[i])
+        print(str(datetime.now()) + ': prcessing image', i + 1, inputImageFiles[i])
         linesCountPerImage = 0
         inputImage = Image.open(inputImagePath + '/' + inputImageFiles[i])
         inputImageXSize, inputImageYSize = inputImage.size
@@ -144,15 +143,14 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
         outputImageXSize, outputImageYSize = outputImage.size
         outputImagePixels = outputImage.load()
 
-
         if ((inputImageXSize != outputImageXSize) or (inputImageYSize != outputImageYSize)):
             raise Exception('train inputImage and outputImage mismatch at index', str(i))
 
-        nameOFbuilding=inputImageFiles[i].split('.')[0]+'.tif'
-        if  nameOFbuilding in buildingImageFiles:
-            print('\ninside_buildings\n')
-            buildingImage = Image.open(buildingImagePath + '/' + nameOFbuilding )
-            buildingImage = buildingImage.convert('LA')
+        nameOFbuilding = inputImageFiles[i].split('.')[0] + '.tif'
+        if nameOFbuilding in buildingImageFiles:
+            print('\nThis is buildings image\n')
+            buildingImage = Image.open(buildingImagePath + '/' + nameOFbuilding)
+            buildingImage = buildingImage.convert('L')
             buildingImageXSize, buildingImageYSize = buildingImage.size
             buildingImagePixels = buildingImage.load()
 
@@ -164,21 +162,21 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
                 for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
 
                     isRoadPixel = outputImagePixels[x, y]
-                    isBuildingPixel = buildingImagePixels[x,y]
+                    isBuildingPixel = buildingImagePixels[x, y]
                     if (isRoadPixel):
                         outputImageRoadPixelsArr.append((x, y))
                     elif (isBuildingPixel):
                         outputImageBuildingPixelsArr.append((x, y))
-                    else :
-                        outputImageNonRoadPixelsArr.append((x,y))
-
-
+                    else:
+                        outputImageNonRoadPixelsArr.append((x, y))
 
             random.shuffle(outputImageRoadPixelsArr)
             random.shuffle(outputImageBuildingPixelsArr)
             random.shuffle(outputImageNonRoadPixelsArr)
 
-
+            # print("Road Pixies number :", len(outputImageRoadPixelsArr))
+            # print("Building Pixies number :", len(outputImageBuildingPixelsArr))
+            # print("Non Pixies numbers :", len(outputImageNonRoadPixelsArr))
 
             for m in range(len(outputImageRoadPixelsArr)):
                 if (linesCountPerImage >= linesLimitPerImage):
@@ -240,6 +238,7 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
                 linesCount += 1
                 linesCountPerImage += 1
                 dataFile.write(line)
+                # ------------------ Thair is no building image for the input image -----------------------------
         else:
             outputImageRoadPixelsArr = []
             outputImageNonRoadPixelsArr = []
@@ -266,7 +265,7 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
                 y = outputImageRoadPixelsArr[m][1]
 
                 rect = (
-                x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+                    x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
                 subImage = inputImage.crop(rect).load()
                 line = ''
                 count = 0
@@ -287,7 +286,7 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
                     y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
 
                     rect = (
-                    x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+                        x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
                     subImage = inputImage.crop(rect).load()
                     line = ''
                     for i in range(rectSize):
@@ -301,18 +300,23 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageF
                     linesCountPerImage += 1
                     dataFile.write(line)
 
-
     print(str(datetime.now()) + ': ' + dataFileName + ' linesCount:', linesCount)
 
 
-trainDataFileName = 'airs-dataset/train.csv'
-testDataFileName = 'airs-dataset/test.csv'
-
+trainDataFileName = 'airs-dataset/Train.csv'
+testDataFileName = 'airs-dataset/Test.csv'
 
 print(str(datetime.now()) + ': writing trainDataFile')
-writeDataFile(trainInputImagesPath, trainOutputImagesPath,targetBuildingsImagesPath ,trainInputImagesFiles, trainOutputImagesFiles,targetBuildingsImagesFiles,trainDataFileName)
+writeDataFile(trainInputImagesPath, trainOutputImagesPath, targetBuildingsImagesPath, trainInputImagesFiles,
+              trainOutputImagesFiles, targetBuildingsImagesFiles, trainDataFileName)
 print(str(datetime.now()) + ': trainDataFile complete')
 
 print(str(datetime.now()) + ': writing testDataFile')
-writeDataFile(testInputImagesPath, testOutputImagesPath,testBuildingsImagesPath, testInputImagesFiles, testOutputImagesFiles, testDataFileName,testBuildingsImagesFiles)
+writeDataFile(testInputImagesPath, testOutputImagesPath, testBuildingsImagesPath, testInputImagesFiles,
+              testOutputImagesFiles, testDataFileName, testBuildingsImagesFiles)
 print(str(datetime.now()) + ': testDataFile complete')
+
+# time to check total time to process this images to CSV files
+endTotalTime = time.time()
+
+print("\nTotal time the process takes : ", (endTotalTime - startTotalTime) / 60)
