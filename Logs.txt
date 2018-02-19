@@ -12,7 +12,7 @@
 - add time method to calculate the total time for 800000 line per CSV file
 
 [.gitignore file]
-----------------------
+---------------------
 - add airs-dataset folder for to it because it is now to big to upload it
 
 [train_model.py file]
