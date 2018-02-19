@@ -16,6 +16,7 @@
 
 model
 
+
 # Gradle:
 .idea/**/gradle.xml
 .idea/**/libraries
@@ -39,6 +40,8 @@ out/
 .idea_modules/
 
 .idea
+
+airs-dataset
 
 # JIRA plugin
 atlassian-ide-plugin.xml
