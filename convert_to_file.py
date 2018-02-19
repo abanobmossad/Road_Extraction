@@ -33,10 +33,10 @@ trainOutputImagesPath = 'E:/mass_roads/Train/Train-output'
 testInputImagesPath = 'E:/mass_roads/Test/Test-input'
 testOutputImagesPath = 'E:/mass_roads/Test/Test-output'
 
-# validation path
 
-validInputImagesPath = 'E:/mass_roads/Validation/Valid-input'
-validOutputImagesPath = 'E:/mass_roads/Validation/Valid-output'
+#buildings path
+targetBuildingsImagesPath = 'E:/mass_roads/buildings/buildings-target'
+testBuildingsImagesPath  = 'E:/mass_roads/buildings/buildings-test'
 
 trainInputImagesFiles = listdir(trainInputImagesPath)
 trainOutputImagesFiles = listdir(trainOutputImagesPath)
@@ -44,10 +44,10 @@ trainOutputImagesFiles = listdir(trainOutputImagesPath)
 testInputImagesFiles = listdir(testInputImagesPath)
 testOutputImagesFiles = listdir(testOutputImagesPath)
 
-validInputImagesFiles = listdir(validInputImagesPath)
-validOutputImagesFiles = listdir(validOutputImagesPath)
-
+targetBuildingsImagesFiles =listdir(targetBuildingsImagesPath)
+testBuildingsImagesFiles = listdir(testBuildingsImagesPath)
 # check if the folders are the same length
+
 
 print(str(datetime.now()) + ': trainInputImagesFiles:', len(trainInputImagesFiles))
 print(str(datetime.now()) + ': trainOutputImagesFiles:', len(trainOutputImagesFiles))
@@ -59,10 +59,7 @@ print(str(datetime.now()) + ': testOutputImagesFiles:', len(testOutputImagesFile
 if (len(testInputImagesFiles) != len(testOutputImagesFiles)):
     raise Exception('test input images and output images number mismatch')
 
-print(str(datetime.now()) + ': validInputImagesFiles:', len(validInputImagesFiles))
-print(str(datetime.now()) + ': validOutputImagesFiles:', len(validOutputImagesFiles))
-if (len(validInputImagesFiles) != len(validOutputImagesFiles)):
-    raise Exception('valid input images and output images number mismatch')
+
 
 for i in range(len(trainInputImagesFiles)):
     inputImageFile = trainInputImagesFiles[i][:-5]
@@ -76,11 +73,7 @@ for i in range(len(testInputImagesFiles)):
     if (inputImageFile != outputImageFile):
         raise Exception('test inputImageFile and outputImageFile mismatch at index', str(i))
 
-for i in range(len(validInputImagesFiles)):
-    inputImageFile = validInputImagesFiles[i][:-5]
-    outputImageFile = validOutputImagesFiles[i][:-4]
-    if (inputImageFile != outputImageFile):
-        raise Exception('valid inputImageFile and outputImageFile mismatch at index', str(i))
+
 
 print(str(datetime.now()) + ': input and output files check success')
 
@@ -133,15 +126,15 @@ def writeDataFileOld(inputImagePath, outputImagePath, inputImageFiles, outputIma
                 dataFile.write(line)
 
 
-def writeDataFile(inputImagePath, outputImagePath, inputImageFiles, outputImageFiles, dataFileName):
+def writeDataFile(inputImagePath, outputImagePath, buildingImagePath,inputImageFiles, outputImageFiles, buildingImageFiles,dataFileName):
     dataFile = open(dataFileName, 'w')
     rectSize = 5
     linesCount = 0
-    linesLimit = 200000
+    linesLimit = 800000
     linesLimitPerImage = (linesLimit / len(inputImageFiles)) + 1
 
     for i in range(len(inputImageFiles)):
-        print(str(datetime.now()) + ': prcessing image', i + 1)
+        print(str(datetime.now()) + ': prcessing image', i + 1,inputImageFiles[i])
         linesCountPerImage = 0
         inputImage = Image.open(inputImagePath + '/' + inputImageFiles[i])
         inputImageXSize, inputImageYSize = inputImage.size
@@ -151,52 +144,88 @@ def writeDataFile(inputImagePath, outputImagePath, inputImageFiles, outputImageF
         outputImageXSize, outputImageYSize = outputImage.size
         outputImagePixels = outputImage.load()
 
+
         if ((inputImageXSize != outputImageXSize) or (inputImageYSize != outputImageYSize)):
             raise Exception('train inputImage and outputImage mismatch at index', str(i))
 
-        outputImageRoadPixelsArr = []
-        outputImageNonRoadPixelsArr = []
+        nameOFbuilding=inputImageFiles[i].split('.')[0]+'.tif'
+        if  nameOFbuilding in buildingImageFiles:
+            print('\ninside_buildings\n')
+            buildingImage = Image.open(buildingImagePath + '/' + nameOFbuilding )
+            buildingImage = buildingImage.convert('LA')
+            buildingImageXSize, buildingImageYSize = buildingImage.size
+            buildingImagePixels = buildingImage.load()
 
-        for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
-            for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
-                isRoadPixel = outputImagePixels[x, y]
-                if (isRoadPixel):
-                    outputImageRoadPixelsArr.append((x, y))
-                else:
-                    outputImageNonRoadPixelsArr.append((x, y))
+            outputImageRoadPixelsArr = []
+            outputImageBuildingPixelsArr = []
+            outputImageNonRoadPixelsArr = []
 
-        random.shuffle(outputImageRoadPixelsArr)
-        random.shuffle(outputImageNonRoadPixelsArr)
+            for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
+                for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
 
-        for m in range(len(outputImageRoadPixelsArr)):
-            if (linesCountPerImage >= linesLimitPerImage):
-                break
+                    isRoadPixel = outputImagePixels[x, y]
+                    isBuildingPixel = buildingImagePixels[x,y]
+                    if (isRoadPixel):
+                        outputImageRoadPixelsArr.append((x, y))
+                    elif (isBuildingPixel):
+                        outputImageBuildingPixelsArr.append((x, y))
+                    else :
+                        outputImageNonRoadPixelsArr.append((x,y))
 
-            if (((m * 2) + 1) >= len(outputImageNonRoadPixelsArr)):
-                break
 
-            x = outputImageRoadPixelsArr[m][0]
-            y = outputImageRoadPixelsArr[m][1]
 
-            rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
-            subImage = inputImage.crop(rect).load()
-            line = ''
-            count = 0
-            for i in range(rectSize):
-                for j in range(rectSize):
-                    line += str(subImage[i, j][0]) + ','
-                    line += str(subImage[i, j][1]) + ','
-                    line += str(subImage[i, j][2]) + ','
-                    count += 1
+            random.shuffle(outputImageRoadPixelsArr)
+            random.shuffle(outputImageBuildingPixelsArr)
+            random.shuffle(outputImageNonRoadPixelsArr)
 
-            line += str(1) + '\n'
-            linesCount += 1
-            linesCountPerImage += 1
-            dataFile.write(line)
 
-            for n in range(2):
-                x = outputImageNonRoadPixelsArr[(m * 2) + n][0]
-                y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
+
+            for m in range(len(outputImageRoadPixelsArr)):
+                if (linesCountPerImage >= linesLimitPerImage):
+                    break
+
+                if (((m * 2) + 1) >= len(outputImageNonRoadPixelsArr)):
+                    break
+
+                x = outputImageRoadPixelsArr[m][0]
+                y = outputImageRoadPixelsArr[m][1]
+
+                rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+                subImage = inputImage.crop(rect).load()
+                line = ''
+                count = 0
+                for i in range(rectSize):
+                    for j in range(rectSize):
+                        line += str(subImage[i, j][0]) + ','
+                        line += str(subImage[i, j][1]) + ','
+                        line += str(subImage[i, j][2]) + ','
+                        count += 1
+
+                line += str(1) + '\n'
+                linesCount += 1
+                linesCountPerImage += 1
+                dataFile.write(line)
+
+                for n in range(2):
+                    x = outputImageNonRoadPixelsArr[(m * 2) + n][0]
+                    y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
+
+                    rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+                    subImage = inputImage.crop(rect).load()
+                    line = ''
+                    for i in range(rectSize):
+                        for j in range(rectSize):
+                            line += str(subImage[i, j][0]) + ','
+                            line += str(subImage[i, j][1]) + ','
+                            line += str(subImage[i, j][2]) + ','
+
+                    line += str(0) + '\n'
+                    linesCount += 1
+                    linesCountPerImage += 1
+                    dataFile.write(line)
+
+                x = outputImageBuildingPixelsArr[(m * 2) + n][0]
+                y = outputImageBuildingPixelsArr[(m * 2) + n][1]
 
                 rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
                 subImage = inputImage.crop(rect).load()
@@ -207,31 +236,83 @@ def writeDataFile(inputImagePath, outputImagePath, inputImageFiles, outputImageF
                         line += str(subImage[i, j][1]) + ','
                         line += str(subImage[i, j][2]) + ','
 
-                line += str(0) + '\n'
+                line += str(2) + '\n'
                 linesCount += 1
                 linesCountPerImage += 1
                 dataFile.write(line)
+        else:
+            outputImageRoadPixelsArr = []
+            outputImageNonRoadPixelsArr = []
+
+            for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
+                for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
+                    isRoadPixel = outputImagePixels[x, y]
+                    if (isRoadPixel):
+                        outputImageRoadPixelsArr.append((x, y))
+                    else:
+                        outputImageNonRoadPixelsArr.append((x, y))
+
+            random.shuffle(outputImageRoadPixelsArr)
+            random.shuffle(outputImageNonRoadPixelsArr)
+
+            for m in range(len(outputImageRoadPixelsArr)):
+                if (linesCountPerImage >= linesLimitPerImage):
+                    break
+
+                if (((m * 2) + 1) >= len(outputImageNonRoadPixelsArr)):
+                    break
+
+                x = outputImageRoadPixelsArr[m][0]
+                y = outputImageRoadPixelsArr[m][1]
+
+                rect = (
+                x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+                subImage = inputImage.crop(rect).load()
+                line = ''
+                count = 0
+                for i in range(rectSize):
+                    for j in range(rectSize):
+                        line += str(subImage[i, j][0]) + ','
+                        line += str(subImage[i, j][1]) + ','
+                        line += str(subImage[i, j][2]) + ','
+                        count += 1
+
+                line += str(1) + '\n'
+                linesCount += 1
+                linesCountPerImage += 1
+                dataFile.write(line)
+
+                for n in range(2):
+                    x = outputImageNonRoadPixelsArr[(m * 2) + n][0]
+                    y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
+
+                    rect = (
+                    x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+                    subImage = inputImage.crop(rect).load()
+                    line = ''
+                    for i in range(rectSize):
+                        for j in range(rectSize):
+                            line += str(subImage[i, j][0]) + ','
+                            line += str(subImage[i, j][1]) + ','
+                            line += str(subImage[i, j][2]) + ','
+
+                    line += str(0) + '\n'
+                    linesCount += 1
+                    linesCountPerImage += 1
+                    dataFile.write(line)
+
 
     print(str(datetime.now()) + ': ' + dataFileName + ' linesCount:', linesCount)
 
 
 trainDataFileName = 'airs-dataset/train.csv'
 testDataFileName = 'airs-dataset/test.csv'
-validDataFileName = 'airs-dataset/valid.csv'
+
 
 print(str(datetime.now()) + ': writing trainDataFile')
-writeDataFile(trainInputImagesPath, trainOutputImagesPath, trainInputImagesFiles, trainOutputImagesFiles,
-              trainDataFileName)
+writeDataFile(trainInputImagesPath, trainOutputImagesPath,targetBuildingsImagesPath ,trainInputImagesFiles, trainOutputImagesFiles,targetBuildingsImagesFiles,trainDataFileName)
 print(str(datetime.now()) + ': trainDataFile complete')
 
 print(str(datetime.now()) + ': writing testDataFile')
-writeDataFile(testInputImagesPath, testOutputImagesPath, testInputImagesFiles, testOutputImagesFiles, testDataFileName)
+writeDataFile(testInputImagesPath, testOutputImagesPath,testBuildingsImagesPath, testInputImagesFiles, testOutputImagesFiles, testDataFileName,testBuildingsImagesFiles)
 print(str(datetime.now()) + ': testDataFile complete')
-
-print(str(datetime.now()) + ': writing validDataFile')
-writeDataFile(validInputImagesPath, validOutputImagesPath, validInputImagesFiles, validOutputImagesFiles,
-              validDataFileName)
-print(str(datetime.now()) + ': validDataFile complete')
-
-
-#comment

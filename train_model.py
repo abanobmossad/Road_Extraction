@@ -16,10 +16,6 @@ testData = tf.contrib.learn.datasets.base.load_csv_without_header(
     filename=testDataFileName,
     target_dtype=np.int,
     features_dtype=np.int)
-# validationData = tf.contrib.learn.datasets.base.load_csv_without_header(
-#     filename=validationDataFileName,
-#     target_dtype=np.int,
-#     features_dtype=np.int)
 
 trainingSteps = 1000
 totalTrainingSteps = 5000
