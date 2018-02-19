@@ -1,0 +1,43 @@
+[predict.py file]
+------------------
+- change the classes numbers to 3
+- add time method to calculate the total time for predicting 
+- add save method to save the resulting image in "Result" folder for documentation 
+
+[convert_to_file.py file]
+--------------------------
+
+- make it work for building images 
+- add 800000 line 
+- add time method to calculate the total time for 800000 line per CSV file
+
+[.gitignore file]
+---------------------
+- add airs-dataset folder for to it because it is now to big to upload it
+
+[train_model.py file]
+------------------
+- change the classes numbers to 3
+- add time method to calculate the total time for Training 800000 line
+
+
+[Result folder]
+-----------------
+- add resulting folder to the project for documentation to see resulting after each training
+
+[logs file]
+------------
+- add logs file to write down what changes in file after each commit to better understanding 
+- this file should be changing after changes in all the above files or add new ones 
+
+
+
+
+
+
+
+
+
+
+
+
