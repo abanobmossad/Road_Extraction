@@ -1,6 +1,10 @@
 from datetime import datetime
 import numpy as np
 import tensorflow as tf
+import time
+
+# calculate the total time for training 800000 line
+stratTotalTime = time.time()
 
 print(str(datetime.now()) + ': loading data files')
 # Data sets
@@ -22,7 +26,7 @@ totalTrainingSteps = 5000
 
 featureColumns = [tf.contrib.layers.real_valued_column("", dimension=75)]
 hiddenUnits = [100, 150, 100, 50]
-classes = 2
+classes = 3
 modelDir = 'model'
 classifierConfig = tf.contrib.learn.RunConfig(save_checkpoints_secs = None, save_checkpoints_steps = trainingSteps)
 
@@ -49,5 +53,8 @@ print(str(datetime.now()) + ': training...')
 classifier.fit(input_fn=getTrainData, steps=totalTrainingSteps)
 print(str(datetime.now()) + ': testing...')
 accuracy = classifier.evaluate(input_fn=getTestData, steps=1)['accuracy']
-print(str(datetime.now()) + ': done')
-print(str(datetime.now()) + ': accuracy:', accuracy)
+print(str(datetime.now()) + ': accuracy of testing:', accuracy)
+
+# calculate the total time for training 800000 line
+endTotalTime = time.time()
+print("Total time for training : ",(endTotalTime-stratTotalTime)/60)
