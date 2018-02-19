@@ -1,63 +1,85 @@
-import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import ndimage, signal
-from skimage.color import rgb2gray
-from skimage import data, measure, segmentation, filters, feature, morphology
-from skimage.filters import gaussian
+from skimage import data, img_as_float
+from skimage.segmentation import (morphological_chan_vese,
+                                  morphological_geodesic_active_contour,
+                                  inverse_gaussian_gradient,
+                                  checkerboard_level_set)
 
-# bilateral filter
-# active contore
-# edge detection and transformation
-from skimage.segmentation import active_contour
 
-img = ndimage.imread("test_images/test4.jpg")
+def store_evolution_in(lst):
+    """Returns a callback function to store the evolution of the level sets in
+    the given list.
+    """
 
-blur = cv2.bilateralFilter(img, 20, 100, 200)
+    def _store(x):
+        lst.append(np.copy(x))
 
-plt.imshow(blur, "gray")
-imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return _store
 
-(thresh, im_bw) = cv2.threshold(imgray, 90, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-med = cv2.medianBlur(im_bw, 9)
 
-plt.imshow(med, "gray", interpolation='nearest')
-plt.figure()
-plt.imshow(img, "gray", interpolation='nearest')
-# Find contours at a constant value of 0.8
-contours = measure.find_contours(med, 0.5, fully_connected="high", positive_orientation="low")
+# Morphological ACWE
+image = img_as_float(data.camera())
 
-# Display the image and plot all contours found
-fig, ax = plt.subplots()
-ax.imshow(img, interpolation='nearest', cmap=plt.cm.gray)
+# Initial level set
+init_ls = checkerboard_level_set(image.shape, 6)
+# List with intermediate results for plotting the evolution
+evolution = []
+callback = store_evolution_in(evolution)
+ls = morphological_chan_vese(image, 35, init_level_set=init_ls, smoothing=3,
+                             iter_callback=callback)
 
-for n, contour in enumerate(contours):
-    ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
+fig, axes = plt.subplots(2, 2, figsize=(8, 8))
+ax = axes.flatten()
 
-ax.axis('image')
-ax.set_xticks([])
-ax.set_yticks([])
-#
-# s = np.linspace(0, 2*np.pi, 400)
-# x = 220 + 100*np.cos(s)
-# y = 100 + 100*np.sin(s)
+ax[0].imshow(image, cmap="gray")
+ax[0].set_axis_off()
+ax[0].contour(ls, [0.5], colors='r')
+ax[0].set_title("Morphological ACWE segmentation", fontsize=12)
 
-#
+ax[1].imshow(ls, cmap="gray")
+ax[1].set_axis_off()
+contour = ax[1].contour(evolution[2], [0.5], colors='g')
+contour.collections[0].set_label("Iteration 2")
+contour = ax[1].contour(evolution[7], [0.5], colors='y')
+contour.collections[0].set_label("Iteration 7")
+contour = ax[1].contour(evolution[-1], [0.5], colors='r')
+contour.collections[0].set_label("Iteration 35")
+ax[1].legend(loc="upper right")
+title = "Morphological ACWE evolution"
+ax[1].set_title(title, fontsize=12)
 
-#
-# fig, ax = plt.subplots(figsize=(7, 7))
-# ax.imshow(img, cmap=plt.cm.gray)
-# ax.plot(init[:, 0], init[:, 1], '--r', lw=3)
-# ax.plot(snake[:, 0], snake[:, 1], '-b', lw=3)
-# ax.set_xticks([]), ax.set_yticks([])
-# ax.axis([0, img.shape[1], img.shape[0], 0])
+# Morphological GAC
+image = img_as_float(data.coins())
+gimage = inverse_gaussian_gradient(image)
 
+# Initial level set
+init_ls = np.zeros(image.shape, dtype=np.int8)
+init_ls[10:-10, 10:-10] = 1
+# List with intermediate results for plotting the evolution
+evolution = []
+callback = store_evolution_in(evolution)
+ls = morphological_geodesic_active_contour(gimage, 230, init_ls,
+                                           smoothing=1, balloon=-1,
+                                           threshold=0.69,
+                                           iter_callback=callback)
+
+ax[2].imshow(image, cmap="gray")
+ax[2].set_axis_off()
+ax[2].contour(ls, [0.5], colors='r')
+ax[2].set_title("Morphological GAC segmentation", fontsize=12)
+
+ax[3].imshow(ls, cmap="gray")
+ax[3].set_axis_off()
+contour = ax[3].contour(evolution[0], [0.5], colors='g')
+contour.collections[0].set_label("Iteration 0")
+contour = ax[3].contour(evolution[100], [0.5], colors='y')
+contour.collections[0].set_label("Iteration 100")
+contour = ax[3].contour(evolution[-1], [0.5], colors='r')
+contour.collections[0].set_label("Iteration 230")
+ax[3].legend(loc="upper right")
+title = "Morphological GAC evolution"
+ax[3].set_title(title, fontsize=12)
+
+fig.tight_layout()
 plt.show()
-
-
-# # Construct some test data
-# x, y = np.ogrid[-np.pi:np.pi:100j, -np.pi:np.pi:100j]
-# r = np.sin(np.exp((np.sin(x)**3 + np.cos(y)**2)))
-#
-#
-# plt.show()
