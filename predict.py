@@ -5,7 +5,9 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import time
+import os
 
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 t_total1 = time.time()
 t1 = time.time()
 print(str(datetime.now()) + ': initializing input data...')
