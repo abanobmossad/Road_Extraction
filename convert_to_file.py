@@ -6,23 +6,23 @@ import time
 
 ''' 
     @:param
-    
+
     [1] this file takes the train images folder path
     [2] this file takes the test images folder path
     [3] this file takes the valid images folder path
     [4] all folders contain (2) sub folders input-images [the satellite images] & output-images [the groundTruth images B&W]
     [5] the input-images and output-images folders must be the same numbers of images 
     [6] all images must be the same size (1500 x 1500)
-    
+
     @:description 
-    
+
     [1] the script crop all images into sub-images (5 x 5) for all 3 channels (RGB)
     [2] thin compare each sub-image with the same in the output-images 
     [3] and put 1 if the pixel is Road or 0 if it's not
     [4] and put all in a single line in CSV file with [0 or 1] in the end depending on step [3]
     [5] do this with all the folders mentioned above and gegenerate 3 CSV files [train, test, valid]
     [6] contain all the feature with the right values used to train, test and predict 
-    
+
 '''
 # time to check total time to process this images to CSV files
 startTotalTime = time.time()
@@ -313,7 +313,7 @@ print(str(datetime.now()) + ': trainDataFile complete')
 
 print(str(datetime.now()) + ': writing testDataFile')
 writeDataFile(testInputImagesPath, testOutputImagesPath, testBuildingsImagesPath, testInputImagesFiles,
-              testOutputImagesFiles, testDataFileName, testBuildingsImagesFiles)
+              testOutputImagesFiles,testBuildingsImagesFiles,testDataFileName)
 print(str(datetime.now()) + ': testDataFile complete')
 
 # time to check total time to process this images to CSV files
