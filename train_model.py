@@ -4,7 +4,10 @@ import tensorflow as tf
 import time
 
 # calculate the total time for training 800000 line
-stratTotalTime = time.time()
+stratTotalTime=time.time()
+
+#print every step
+tf.logging.set_verbosity(tf.logging.INFO)
 
 print(str(datetime.now()) + ': loading data files')
 # Data sets
@@ -22,7 +25,10 @@ testData = tf.contrib.learn.datasets.base.load_csv_without_header(
     features_dtype=np.int)
 
 trainingSteps = 1000
-totalTrainingSteps = 5000
+validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
+    testData.data,
+    testData.target,
+    every_n_steps=50)
 
 featureColumns = [tf.contrib.layers.real_valued_column("", dimension=75)]
 hiddenUnits = [100, 150, 100, 50]
@@ -37,23 +43,23 @@ classifier = tf.contrib.learn.DNNClassifier(feature_columns = featureColumns,
                                                 config = classifierConfig)
 
 # Define the training inputs
-def getTrainData():
-    x = tf.constant(trainData.data)
-    y = tf.constant(trainData.target)
-    return x, y
+
+x_train = trainData.data
+y_train = trainData.target
+
 
 # Define the test inputs
-def getTestData():
-    x = tf.constant(testData.data)
-    y = tf.constant(testData.target)
-    return x, y
+
+x_test = testData.data
+y_test = testData.target
+
 
 
 print(str(datetime.now()) + ': training...')
-classifier.fit(input_fn=getTrainData, steps=totalTrainingSteps)
+classifier.fit(x=x_train,y=y_train,batch_size=200000,steps=20000,monitors=[validation_monitor])
 print(str(datetime.now()) + ': testing...')
-accuracy = classifier.evaluate(input_fn=getTestData, steps=1)['accuracy']
-print(str(datetime.now()) + ': accuracy of testing:', accuracy)
+accuracy = classifier.evaluate(x=x_test,y=y_test,batch_size=200000, steps=1)['accuracy']
+print(str(datetime.now()) + ': accuracy of testing:', accuracy*100)
 
 # calculate the total time for training 800000 line
 endTotalTime = time.time()
