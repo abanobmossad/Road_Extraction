@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 t_total1 = time.time()
 t1 = time.time()
@@ -16,7 +16,7 @@ print(str(datetime.now()) + ': initializing input data...')
 rectSize = 5
 
 # enter the image pass here
-image_path = r'E:/mass_roads/Validation/Valid-input/23128930_15.TIFF'
+image_path = r'E:\mass_roads\valid\sat\23128930_15.TIFF'
 
 inputImage = Image.open(image_path)
 inputImageXSize, inputImageYSize = inputImage.size
@@ -71,9 +71,7 @@ def constructOutputImage(predictions):
     for x in range(outputImageXSize):
         for y in range(outputImageYSize):
             if predictions[rowIndex]==1:
-                outputImagePixels[x, y] = (255, 0, 0)
-            elif predictions[rowIndex]==2:
-                outputImagePixels[x, y] = (0, 255, 0)
+                outputImagePixels[x, y] = (255, 255,255)
             else:
                 outputImagePixels[x, y] = (0, 0, 0)
 
@@ -97,7 +95,7 @@ plt.imshow(outputImage)
 plt.show()
 
 print(str(datetime.now()) + ': saving output image...')
-outputImage.save('Results/Second-result.png', 'JPEG')
+outputImage.save('Results/Second-result_road.png', 'JPEG')
 t_total2 = time.time()
 
 print(str(datetime.now()) + ': Total time for predicting : ', (t_total2 - t_total1)/60)
