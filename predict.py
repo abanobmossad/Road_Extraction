@@ -70,7 +70,13 @@ def constructOutputImage(predictions):
     rowIndex = 0
     for x in range(outputImageXSize):
         for y in range(outputImageYSize):
-            outputImagePixels[x, y] = ((255, 255, 255) if predictions[rowIndex] else (0, 0, 0))
+            if predictions[rowIndex]==1:
+                outputImagePixels[x, y] = (255, 0, 0)
+            elif predictions[rowIndex]==2:
+                outputImagePixels[x, y] = (0, 255, 0)
+            else:
+                outputImagePixels[x, y] = (0, 0, 0)
+
             rowIndex += 1
 
 
@@ -94,4 +100,4 @@ print(str(datetime.now()) + ': saving output image...')
 outputImage.save('Results/Second-result.png', 'JPEG')
 t_total2 = time.time()
 
-print(str(datetime.now()) + ': Total time for predicting : ', t_total2 - t_total1)
+print(str(datetime.now()) + ': Total time for predicting : ', (t_total2 - t_total1)/60)
