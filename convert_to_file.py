@@ -3,6 +3,11 @@ from os import listdir
 from PIL import Image
 from datetime import datetime
 import time
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.color import rgb2gray
+from skimage.feature import multiblock_lbp, greycomatrix, greycoprops, CENSURE, local_binary_pattern, ORB
+from skimage.transform import integral_image
 
 ''' 
     @:param
@@ -24,21 +29,27 @@ import time
     [6] contain all the feature with the right values used to train, test and predict 
 
 '''
+# line limit per CSV file
+# for training dataset
+trainLinesLimit = 1000000
+# for testing dataset
+testLinesLimit = 800000
+
 # time to check total time to process this images to CSV files
 startTotalTime = time.time()
 
 # Train path
-trainInputImagesPath = 'E:/mass_roads/Train/Train-input'
-trainOutputImagesPath = 'E:/mass_roads/Train/Train-output'
+trainInputImagesPath = r'E:\Dataset\Train\Train-input'
+trainOutputImagesPath = r'E:\Dataset\Train\Train-output-roads'
 
 # Test path
 
-testInputImagesPath = 'E:/mass_roads/Test/Test-input'
-testOutputImagesPath = 'E:/mass_roads/Test/Test-output'
+testInputImagesPath = r'E:\Dataset\Test\Test-input'
+testOutputImagesPath = r'E:\Dataset\Test\Test-output-roads'
 
 # buildings path
-targetBuildingsImagesPath = 'E:/mass_roads/buildings/buildings-target'
-testBuildingsImagesPath = 'E:/mass_roads/buildings/buildings-test'
+targetBuildingsImagesPath = r'E:\Dataset\Train\Train-output-buildings'
+testBuildingsImagesPath = r'E:\Dataset\Test\Test-output-buildings'
 
 trainInputImagesFiles = listdir(trainInputImagesPath)
 trainOutputImagesFiles = listdir(trainOutputImagesPath)
@@ -51,13 +62,17 @@ testBuildingsImagesFiles = listdir(testBuildingsImagesPath)
 # check if the folders are the same length
 
 
-print(str(datetime.now()) + ': trainInputImagesFiles:', len(trainInputImagesFiles))
-print(str(datetime.now()) + ': trainOutputImagesFiles:', len(trainOutputImagesFiles))
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Train Data Images Files:', len(trainInputImagesFiles))
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Train Target Images Files:', len(trainOutputImagesFiles))
+
 if (len(trainInputImagesFiles) != len(trainOutputImagesFiles)):
     raise Exception('train input images and output images number mismatch')
 
-print(str(datetime.now()) + ': testInputImagesFiles:', len(testInputImagesFiles))
-print(str(datetime.now()) + ': testOutputImagesFiles:', len(testOutputImagesFiles))
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Test Data Images Files:', len(testInputImagesFiles))
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Test Target Images Files:', len(testOutputImagesFiles))
+
+print("-------------------------------------------------------------------")
+
 if (len(testInputImagesFiles) != len(testOutputImagesFiles)):
     raise Exception('test input images and output images number mismatch')
 
@@ -73,160 +88,118 @@ for i in range(len(testInputImagesFiles)):
     if (inputImageFile != outputImageFile):
         raise Exception('test inputImageFile and outputImageFile mismatch at index', str(i))
 
-print(str(datetime.now()) + ': input and output files check success')
-
-
-# unused test method
-def writeDataFileOld(inputImagePath, outputImagePath, inputImageFiles, outputImageFiles, dataFileName):
-    dataFile = open(dataFileName, 'w')
-    roadPixel = 1
-    nonroadPixel = 0
-    neededPixel = 0
-
-    rectSize = 5
-
-    for i in range(len(inputImageFiles)):
-        # if(i > 0):
-        #    break
-
-        print(str(datetime.now()) + ': prcessing image', i)
-        inputImage = Image.open(inputImagePath + '/' + inputImageFiles[i])
-        inputImageXSize, inputImageYSize = inputImage.size
-        inputImagePixels = inputImage.load()
-
-        outputImage = Image.open(outputImagePath + '/' + outputImageFiles[i])
-        outputImageXSize, outputImageYSize = outputImage.size
-        outputImagePixels = outputImage.load()
-
-        if ((inputImageXSize != outputImageXSize) or (inputImageYSize != outputImageYSize)):
-            raise Exception('train inputImage and outputImage mismatch at index', str(i))
-
-        for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
-            for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
-                isRoadPixel = outputImagePixels[x, y]
-                if ((isRoadPixel) and (neededPixel != roadPixel)):
-                    continue
-
-                if ((not (isRoadPixel)) and (neededPixel == roadPixel)):
-                    continue
-
-                neededPixel = ((neededPixel + 1) % 3)
-                rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
-                subImage = inputImage.crop(rect).load()
-                line = ''
-                for i in range(rectSize):
-                    for j in range(rectSize):
-                        line += str(subImage[i, j][0]) + ','
-                        line += str(subImage[i, j][1]) + ','
-                        line += str(subImage[i, j][2]) + ','
-
-                line += str(roadPixel if isRoadPixel else nonroadPixel) + '\n'
-                dataFile.write(line)
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Input and output files check success')
 
 
 def writeDataFile(inputImagePath, outputImagePath, buildingImagePath, inputImageFiles, outputImageFiles,
-                  buildingImageFiles, dataFileName):
+                  buildingImageFiles, dataFileName, linesLimit: int):
     dataFile = open(dataFileName, 'w')
     rectSize = 5
     linesCount = 0
-    linesLimit = 800000
     linesLimitPerImage = (linesLimit / len(inputImageFiles)) + 1
-
     for i in range(len(inputImageFiles)):
-        print(str(datetime.now()) + ': prcessing image', i + 1, inputImageFiles[i])
+        print(str(datetime.now()) + ': Extract features from image', i + 1, "\"", inputImageFiles[i], "\"")
         linesCountPerImage = 0
         inputImage = Image.open(inputImagePath + '/' + inputImageFiles[i])
         inputImageXSize, inputImageYSize = inputImage.size
-        # inputImagePixels = inputImage.load()
 
         outputImage = Image.open(outputImagePath + '/' + outputImageFiles[i])
         outputImageXSize, outputImageYSize = outputImage.size
         outputImagePixels = outputImage.load()
 
+        buildingImage = Image.open(buildingImagePath + '/' + buildingImageFiles[i])
+        buildingImage = buildingImage.convert('L')
+        buildingImagePixels = buildingImage.load()
+
         if ((inputImageXSize != outputImageXSize) or (inputImageYSize != outputImageYSize)):
             raise Exception('train inputImage and outputImage mismatch at index', str(i))
 
-        nameOFbuilding = inputImageFiles[i].split('.')[0] + '.tif'
-        if nameOFbuilding in buildingImageFiles:
-            print('\nThis is buildings image\n')
-            buildingImage = Image.open(buildingImagePath + '/' + nameOFbuilding)
-            buildingImage = buildingImage.convert('L')
-            buildingImageXSize, buildingImageYSize = buildingImage.size
-            buildingImagePixels = buildingImage.load()
+        outputImageRoadPixelsArr = []
+        outputImageBuildingPixelsArr = []
+        outputImageNonRoadPixelsArr = []
 
-            outputImageRoadPixelsArr = []
-            outputImageBuildingPixelsArr = []
-            outputImageNonRoadPixelsArr = []
+        for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
+            for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
 
-            for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
-                for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
+                isRoadPixel = outputImagePixels[x, y]
+                isBuildingPixel = buildingImagePixels[x, y]
+                if (isRoadPixel):
+                    outputImageRoadPixelsArr.append((x, y))
+                elif (isBuildingPixel):
+                    outputImageBuildingPixelsArr.append((x, y))
+                else:
+                    outputImageNonRoadPixelsArr.append((x, y))
 
-                    isRoadPixel = outputImagePixels[x, y]
-                    isBuildingPixel = buildingImagePixels[x, y]
-                    if (isRoadPixel):
-                        outputImageRoadPixelsArr.append((x, y))
-                    elif (isBuildingPixel):
-                        outputImageBuildingPixelsArr.append((x, y))
-                    else:
-                        outputImageNonRoadPixelsArr.append((x, y))
+        random.shuffle(outputImageRoadPixelsArr)
+        random.shuffle(outputImageBuildingPixelsArr)
+        random.shuffle(outputImageNonRoadPixelsArr)
 
-            random.shuffle(outputImageRoadPixelsArr)
-            random.shuffle(outputImageBuildingPixelsArr)
-            random.shuffle(outputImageNonRoadPixelsArr)
+        print("Road Pixies number :", len(outputImageRoadPixelsArr))
+        print("Building Pixies number :", len(outputImageBuildingPixelsArr))
+        print("Non buildings and roads Pixies numbers :", len(outputImageNonRoadPixelsArr))
 
-            # print("Road Pixies number :", len(outputImageRoadPixelsArr))
-            # print("Building Pixies number :", len(outputImageBuildingPixelsArr))
-            # print("Non Pixies numbers :", len(outputImageNonRoadPixelsArr))
+        for m in range(len(outputImageRoadPixelsArr)):
+            if (linesCountPerImage >= linesLimitPerImage):
+                break
 
-            for m in range(len(outputImageRoadPixelsArr)):
-                if (linesCountPerImage >= linesLimitPerImage):
-                    break
+            if (((m * 2) + 1) >= len(outputImageNonRoadPixelsArr)):
+                break
 
-                if (((m * 2) + 1) >= len(outputImageNonRoadPixelsArr)):
-                    break
+            x = outputImageRoadPixelsArr[m][0]
+            y = outputImageRoadPixelsArr[m][1]
 
-                x = outputImageRoadPixelsArr[m][0]
-                y = outputImageRoadPixelsArr[m][1]
+            rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+            subImage = inputImage.crop(rect).load()
 
-                rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
-                subImage = inputImage.crop(rect).load()
-                line = ''
-                count = 0
-                for i in range(rectSize):
-                    for j in range(rectSize):
-                        line += str(subImage[i, j][0]) + ','
-                        line += str(subImage[i, j][1]) + ','
-                        line += str(subImage[i, j][2]) + ','
-                        count += 1
+            # ---------------------GlCM features----------------------
+            ROI_roads = np.asarray(inputImage.crop(rect).getdata()).reshape((5, 5, 3)).astype('uint8')
+            ROI_roads = rgb2gray(ROI_roads)
+            ROI_roads *= 255.0 / ROI_roads.max()
+            ROI_roads = ROI_roads.astype('int').astype('uint8')
+            g = greycomatrix(ROI_roads, [1, 2], [0, np.pi / 2], normed=True, symmetric=True)
+            GlcmRoads = greycoprops(g, 'contrast')
 
-                line += str(1) + '\n'
-                linesCount += 1
-                linesCountPerImage += 1
-                dataFile.write(line)
+            # print("Roads\n", GlcmRoads)
+            # ------------------------------------------
 
-                for n in range(2):
-                    x = outputImageNonRoadPixelsArr[(m * 2) + n][0]
-                    y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
 
-                    rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
-                    subImage = inputImage.crop(rect).load()
-                    line = ''
-                    for i in range(rectSize):
-                        for j in range(rectSize):
-                            line += str(subImage[i, j][0]) + ','
-                            line += str(subImage[i, j][1]) + ','
-                            line += str(subImage[i, j][2]) + ','
+            line = ''
+            count = 0
+            for i in range(rectSize):
+                for j in range(rectSize):
+                    line += str(subImage[i, j][0]) + ','
+                    line += str(subImage[i, j][1]) + ','
+                    line += str(subImage[i, j][2]) + ','
+                    count += 1
 
-                    line += str(0) + '\n'
-                    linesCount += 1
-                    linesCountPerImage += 1
-                    dataFile.write(line)
+            for x in range(GlcmRoads.shape[0]):
+                for y in range(GlcmRoads.shape[1]):
+                    line += str(GlcmRoads[x, y]) + ','
 
-                x = outputImageBuildingPixelsArr[(m * 2) + n][0]
-                y = outputImageBuildingPixelsArr[(m * 2) + n][1]
+
+            line += str(1) + '\n'
+            linesCount += 1
+            linesCountPerImage += 1
+            dataFile.write(line)
+
+            for n in range(2):
+                x = outputImageNonRoadPixelsArr[(m * 2) + n][0]
+                y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
 
                 rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
                 subImage = inputImage.crop(rect).load()
+
+                # --------------------GlCM features-----------------------
+                ROI_non = np.asarray(inputImage.crop(rect).getdata()).reshape((5, 5, 3)).astype('uint8')
+                ROI_non = rgb2gray(ROI_non)
+                ROI_non *= 255.0 / ROI_non.max()
+                ROI_non = ROI_non.astype('int').astype('uint8')
+                g = greycomatrix(ROI_non, [1, 2], [0, np.pi / 2], normed=True, symmetric=True)
+                GlcmNon = greycoprops(g, 'contrast')
+
+                # print("NON\n", GlcmNon)
+                # ------------------------------------------
+
                 line = ''
                 for i in range(rectSize):
                     for j in range(rectSize):
@@ -234,89 +207,70 @@ def writeDataFile(inputImagePath, outputImagePath, buildingImagePath, inputImage
                         line += str(subImage[i, j][1]) + ','
                         line += str(subImage[i, j][2]) + ','
 
-                line += str(2) + '\n'
-                linesCount += 1
-                linesCountPerImage += 1
-                dataFile.write(line)
-                # ------------------ Thair is no building image for the input image -----------------------------
-        else:
-            outputImageRoadPixelsArr = []
-            outputImageNonRoadPixelsArr = []
+                for x in range(GlcmNon.shape[0]):
+                    for y in range(GlcmNon.shape[1]):
+                        line += str(GlcmNon[x, y]) + ','
 
-            for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
-                for y in range(rectSize // 2, inputImageYSize - (rectSize // 2)):
-                    isRoadPixel = outputImagePixels[x, y]
-                    if (isRoadPixel):
-                        outputImageRoadPixelsArr.append((x, y))
-                    else:
-                        outputImageNonRoadPixelsArr.append((x, y))
-
-            random.shuffle(outputImageRoadPixelsArr)
-            random.shuffle(outputImageNonRoadPixelsArr)
-
-            for m in range(len(outputImageRoadPixelsArr)):
-                if (linesCountPerImage >= linesLimitPerImage):
-                    break
-
-                if (((m * 2) + 1) >= len(outputImageNonRoadPixelsArr)):
-                    break
-
-                x = outputImageRoadPixelsArr[m][0]
-                y = outputImageRoadPixelsArr[m][1]
-
-                rect = (
-                    x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
-                subImage = inputImage.crop(rect).load()
-                line = ''
-                count = 0
-                for i in range(rectSize):
-                    for j in range(rectSize):
-                        line += str(subImage[i, j][0]) + ','
-                        line += str(subImage[i, j][1]) + ','
-                        line += str(subImage[i, j][2]) + ','
-                        count += 1
-
-                line += str(1) + '\n'
+                line += str(0) + '\n'
                 linesCount += 1
                 linesCountPerImage += 1
                 dataFile.write(line)
 
-                for n in range(2):
-                    x = outputImageNonRoadPixelsArr[(m * 2) + n][0]
-                    y = outputImageNonRoadPixelsArr[(m * 2) + n][1]
+            x = outputImageBuildingPixelsArr[(m * 2) + n][0]
+            y = outputImageBuildingPixelsArr[(m * 2) + n][1]
 
-                    rect = (
-                        x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
-                    subImage = inputImage.crop(rect).load()
-                    line = ''
-                    for i in range(rectSize):
-                        for j in range(rectSize):
-                            line += str(subImage[i, j][0]) + ','
-                            line += str(subImage[i, j][1]) + ','
-                            line += str(subImage[i, j][2]) + ','
+            rect = (x - (rectSize // 2), y - (rectSize // 2), x + (rectSize // 2) + 1, y + (rectSize // 2) + 1)
+            subImage = inputImage.crop(rect).load()
 
-                    line += str(0) + '\n'
-                    linesCount += 1
-                    linesCountPerImage += 1
-                    dataFile.write(line)
+            # -----------------GlCM features---------------------
+            ROI_build = np.asarray(inputImage.crop(rect).getdata()).reshape((5, 5, 3)).astype('uint8')
+            ROI_build = rgb2gray(ROI_build)
+            ROI_build *= 255.0 / ROI_build.max()
+            ROI_build = ROI_build.astype('int').astype('uint8')
+            g = greycomatrix(ROI_build, [1, 2], [0, np.pi / 2], normed=True, symmetric=True)
+            GlcmBuild = greycoprops(g, 'contrast')
 
+            # print("Building\n", GlcmBuild)
+            # ------------------------------------------
+
+            line = ''
+            for i in range(rectSize):
+                for j in range(rectSize):
+                    line += str(subImage[i, j][0]) + ','
+                    line += str(subImage[i, j][1]) + ','
+                    line += str(subImage[i, j][2]) + ','
+
+            for x in range(GlcmBuild.shape[0]):
+                for y in range(GlcmBuild.shape[1]):
+                    line += str(GlcmBuild[x, y]) + ','
+
+            line += str(2) + '\n'
+            linesCount += 1
+            linesCountPerImage += 1
+            dataFile.write(line)
+        print("-------------------------------------------------------------------")
     print(str(datetime.now()) + ': ' + dataFileName + ' linesCount:', linesCount)
 
 
 trainDataFileName = 'airs-dataset/Train.csv'
 testDataFileName = 'airs-dataset/Test.csv'
 
-print(str(datetime.now()) + ': writing trainDataFile')
-writeDataFile(trainInputImagesPath, trainOutputImagesPath, targetBuildingsImagesPath, trainInputImagesFiles,
-              trainOutputImagesFiles, targetBuildingsImagesFiles, trainDataFileName)
-print(str(datetime.now()) + ': trainDataFile complete')
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': writing train Data File in CVS file with ', trainLinesLimit,
+      " line", "and 10310 line per image")
 
-print(str(datetime.now()) + ': writing testDataFile')
+writeDataFile(trainInputImagesPath, trainOutputImagesPath, targetBuildingsImagesPath, trainInputImagesFiles,
+              trainOutputImagesFiles, targetBuildingsImagesFiles, trainDataFileName, trainLinesLimit)
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Train data CSV file complete.')
+
+print("-------------------------------------------------------------------")
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': writing test Data File in CVS file with ', testLinesLimit,
+      " line")
+
 writeDataFile(testInputImagesPath, testOutputImagesPath, testBuildingsImagesPath, testInputImagesFiles,
-              testOutputImagesFiles,testBuildingsImagesFiles,testDataFileName)
-print(str(datetime.now()) + ': testDataFile complete')
+              testOutputImagesFiles, testBuildingsImagesFiles, testDataFileName, testLinesLimit)
+print('{0:%Y-%m-%d %H:%M}'.format(datetime.now()) + ': Test data CSV file complete.')
 
 # time to check total time to process this images to CSV files
 endTotalTime = time.time()
 
-print("\nTotal time the process takes : ", (endTotalTime - startTotalTime) / 60)
+print("Total time the process takes : ", (endTotalTime - startTotalTime) / 60, " Minutes")
