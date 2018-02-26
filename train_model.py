@@ -30,7 +30,7 @@ validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
     testData.target,
     every_n_steps=50)
 
-featureColumns = [tf.contrib.layers.real_valued_column("", dimension=75)]
+featureColumns = [tf.contrib.layers.real_valued_column("", dimension=79)]
 hiddenUnits = [100, 150, 100, 50]
 classes = 3
 modelDir = 'model'

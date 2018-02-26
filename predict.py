@@ -26,7 +26,7 @@ outputImage = inputImage.crop(
 outputImageXSize, outputImageYSize = outputImage.size
 
 print(str(datetime.now()) + ': initializing model...')
-featureColumns = [tf.contrib.layers.real_valued_column("", dimension=75)]
+featureColumns = [tf.contrib.layers.real_valued_column("", dimension=79)]
 
 hiddenUnits = [100, 150, 100, 50]
 
