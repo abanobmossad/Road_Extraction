@@ -11,8 +11,8 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 print(str(datetime.now()) + ': loading data files')
 # Data sets
-trainDataFileName = 'airs-dataset/train.csv'
-testDataFileName = 'airs-dataset/test.csv'
+trainDataFileName = 'airs-dataset/Train.csv'
+testDataFileName = 'airs-dataset/Test.csv'
 validationDataFileName = 'airs-dataset/valid.csv'
 # Load datasets.
 trainData = tf.contrib.learn.datasets.base.load_csv_without_header(
@@ -30,7 +30,7 @@ validation_monitor = tf.contrib.learn.monitors.ValidationMonitor(
     testData.target,
     every_n_steps=50)
 
-featureColumns = [tf.contrib.layers.real_valued_column("", dimension=79)]
+featureColumns = [tf.contrib.layers.real_valued_column("", dimension=75)]
 hiddenUnits = [100, 150, 100, 50]
 classes = 3
 modelDir = 'model'
@@ -56,11 +56,11 @@ y_test = testData.target
 
 
 print(str(datetime.now()) + ': training...')
-classifier.fit(x=x_train,y=y_train,batch_size=200000,steps=20000,monitors=[validation_monitor])
+classifier.fit(x=x_train,y=y_train,batch_size=200000,steps=5000,monitors=[validation_monitor])
 print(str(datetime.now()) + ': testing...')
 accuracy = classifier.evaluate(x=x_test,y=y_test,batch_size=200000, steps=1)['accuracy']
 print(str(datetime.now()) + ': accuracy of testing:', accuracy*100)
 
-# calculate the total time for training 800000 line
+# calculate the total time for training 1000000 line
 endTotalTime = time.time()
 print("Total time for training : ",(endTotalTime-stratTotalTime)/60)
