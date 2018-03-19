@@ -6,11 +6,11 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import time
 import os
-
 from skimage.color import rgb2gray
 from skimage.feature import greycomatrix, greycoprops
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 t_total1 = time.time()
 t1 = time.time()
@@ -18,8 +18,9 @@ print(str(datetime.now()) + ': initializing input data...')
 
 rectSize = 5
 
+image_name ="10978735_15"
 # enter the image pass here
-image_path = r'E:\mass_roads\valid\sat\23128930_15.TIFF'
+image_path = r'E:\Dataset\Validation\Valid-input\\'+image_name+'.TIFF'
 
 inputImage = Image.open(image_path)
 
@@ -48,7 +49,6 @@ print("initializing model time :", (t2 - t1)/60)
 def extractFeatures():
     features = np.zeros((((inputImageXSize - ((rectSize // 2) * 2)) * (inputImageYSize - ((rectSize // 2) * 2))),
                          rectSize * rectSize * 3), dtype=np.int)
-    print(features.shape)
     rowIndex = 0
 
     for x in range(rectSize // 2, inputImageXSize - (rectSize // 2)):
@@ -68,7 +68,6 @@ def extractFeatures():
                     colIndex += 1
             rowIndex += 1
 
-    print(features)
     return features
 
 
@@ -78,9 +77,9 @@ def constructOutputImage(predictions):
     for x in range(outputImageXSize):
         for y in range(outputImageYSize):
             if predictions[rowIndex]==1:
-                outputImagePixels[x, y] = (0, 255,0)
-            elif predictions[rowIndex]==2:
                 outputImagePixels[x, y] = (255, 0,0)
+            elif predictions[rowIndex]==2:
+                outputImagePixels[x, y] = (0, 255,0)
             else:
                 outputImagePixels[x, y] = (0, 0, 0)
 
@@ -88,8 +87,7 @@ def constructOutputImage(predictions):
 
 
 t1 = time.time()
-# print(extractFeatures())
-# print(extractFeatures().shape)
+
 print(str(datetime.now()) + ': processing image')
 predictions = list(classifier.predict_classes(input_fn=extractFeatures))
 t2 = time.time()
@@ -100,13 +98,15 @@ print(str(datetime.now()) + ': constructing output image...')
 constructOutputImage(predictions)
 t2 = time.time()
 
+
+print(str(datetime.now()) + ': saving output image...')
+outputImage.save('Results/'+image_name+'.png', 'JPEG')
+
 print("constructing output image and ploting time : ", (t2 - t1)/60)
 plt.figure()
 plt.imshow(outputImage)
 plt.show()
 
-print(str(datetime.now()) + ': saving output image...')
-outputImage.save('Results/Second-result_road.png', 'JPEG')
 t_total2 = time.time()
 
 print(str(datetime.now()) + ': Total time for predicting : ', (t_total2 - t_total1)/60)
