@@ -56,7 +56,7 @@ y_test = testData.target
 
 
 print(str(datetime.now()) + ': training...')
-classifier.fit(x=x_train,y=y_train,batch_size=200000,steps=5000,monitors=[validation_monitor])
+classifier.fit(x=x_train,y=y_train,batch_size=200000,steps=10000,monitors=[validation_monitor])
 print(str(datetime.now()) + ': testing...')
 accuracy = classifier.evaluate(x=x_test,y=y_test,batch_size=200000, steps=1)['accuracy']
 print(str(datetime.now()) + ': accuracy of testing:', accuracy*100)
